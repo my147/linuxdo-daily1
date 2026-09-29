@@ -1,0 +1,10 @@
+# linux.do 每日活跃 —— GitHub Actions 版
+#
+# 说明：本项目在云端（GitHub Actions runner）运行，不需要本地代理，
+# 也不需要你的电脑开机。凭据通过 GitHub Secrets 注入。
+#
+# 为什么用 cookie 而不是账号密码：
+#   密码可以改，cookie 只能等到期；而且 cookie 可随时通过在论坛
+#   「登出所有设备」一键失效，泄露面更可控。
+
+playwright>=1.40.0

@@ -1,0 +1,103 @@
+name: linux.do Daily
+
+# 触发方式：
+#   1) 定时：每天 UTC 01:00 = 北京时间 09:00，另外 UTC 13:00 = 北京 21:00 补一次
+#   2) 手动：Actions 页面点 Run workflow（首次务必手动跑一次验证）
+on:
+  schedule:
+    - cron: '0 1 * * *'
+    - cron: '0 13 * * *'
+  workflow_dispatch:
+    inputs:
+      topics:
+        description: '浏览几个帖子（留空用默认 10）'
+        required: false
+        default: ''
+      dry_run:
+        description: '只浏览不上报（调试用）'
+        type: boolean
+        required: false
+        default: false
+
+# 允许手动取消 / 并发控制：同一时间只跑一个
+concurrency:
+  group: linuxdo-daily
+  cancel-in-progress: false
+
+jobs:
+  daily:
+    name: linux.do 每日活跃
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Chromium (Playwright)
+        run: python -m playwright install --with-deps chromium
+
+      - name: Show environment
+        run: |
+          python --version
+          python -c "import playwright; print('playwright ok')"
+          echo "出口 IP:"
+          curl -s --max-time 15 https://ipinfo.io/json || true
+
+      - name: Run daily task
+        env:
+          # 方式一（推荐）：cookie。用 export_cookies.py 生成后存成 Secret
+          LINUXDO_COOKIES: ${{ secrets.LINUXDO_COOKIES }}
+          # 云端直连，不走代理
+          LINUXDO_NO_PROXY: '1'
+          # 无头运行
+          LINUXDO_HEADLESS: '1'
+        run: |
+          ARGS=""
+          if [ -n "${{ github.event.inputs.topics }}" ]; then
+            ARGS="$ARGS --topics ${{ github.event.inputs.topics }}"
+          fi
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          echo "运行参数: $ARGS"
+          python linuxdo_daily.py $ARGS
+        continue-on-error: true
+
+      - name: Collect result
+        if: always()
+        run: |
+          echo "===== 运行结果 ====="
+          if [ -f linuxdo-last-run.json ]; then
+            cat linuxdo-last-run.json
+          else
+            echo "（没有生成结果文件，说明脚本启动阶段就失败了）"
+          fi
+
+      - name: Upload result artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linuxdo-result-${{ github.run_number }}
+          path: |
+            linuxdo-last-run.json
+            fail-*.png
+            fail-*.html
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::linux.do 每日任务失败，请查看上面的日志"

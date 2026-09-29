@@ -1,0 +1,25 @@
+# 凭据与运行产物 —— 绝不入库
+config.json
+state.json
+auth_state.json
+*.log
+cookie*.txt
+linuxdo-cookies*.txt
+linuxdo-last-run.json
+
+# 失败现场截图/HTML
+fail-*.png
+fail-*.html
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+.DS_Store

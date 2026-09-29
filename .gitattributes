@@ -1,0 +1,14 @@
+# 全部按 LF 存储 —— 这些文件要在 Linux (GitHub Actions) 上运行，
+# CRLF 会导致 shell/python 报 `$'\r': command not found`
+* text=auto eol=lf
+
+# 明确指定
+*.py   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.md   text eol=lf
+*.txt  text eol=lf
+
+# 二进制不转换
+*.png  binary
+*.ico  binary
